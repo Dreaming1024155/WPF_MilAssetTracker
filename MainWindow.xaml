@@ -1,0 +1,483 @@
+﻿<Window x:Class="WPF_프로젝트.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:WPF_프로젝트"
+        Title="MIL-Asset Tracker" Height="800" Width="1320" MinHeight="620" MinWidth="1080"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="Malgun Gothic" FontSize="13" Background="#F4F6F8">
+
+    <Window.Resources>
+        <local:ImagePathConverter x:Key="ImgConv"/>
+        <local:NullToVisibilityConverter x:Key="NullToVis"/>
+        <local:NullToVisibilityConverter x:Key="NullToVisInv" Invert="True"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- 공통 스타일 -->
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#DDE1E6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="14"/>
+        </Style>
+
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Foreground" Value="#1F2A37"/>
+        </Style>
+
+        <Style x:Key="Label" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,3"/>
+        </Style>
+
+        <Style x:Key="Value" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,3"/>
+        </Style>
+
+        <Style x:Key="Cell" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="6,0"/>
+        </Style>
+
+        <Style x:Key="CellRight" TargetType="TextBlock" BasedOn="{StaticResource Cell}">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="MinWidth" Value="64"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="#2F5D8A"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#244A6E"/>
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="5,4"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="SelectionMode" Value="Single"/>
+            <Setter Property="CanUserSortColumns" Value="True"/>
+            <Setter Property="CanUserResizeRows" Value="False"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#E5E7EB"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#DDE1E6"/>
+            <Setter Property="RowHeaderWidth" Value="0"/>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Padding" Value="8,7"/>
+            <Setter Property="Background" Value="#EEF1F5"/>
+            <Setter Property="BorderBrush" Value="#D5DAE1"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="ToolTip" Value="클릭: 오름차순 ↔ 내림차순 정렬"/>
+        </Style>
+
+        <!-- 상태 뱃지 -->
+        <DataTemplate x:Key="StatusBadge">
+            <Border x:Name="badge" CornerRadius="10" Padding="9,2" Margin="6,0"
+                    HorizontalAlignment="Left" VerticalAlignment="Center" Background="#DDF3E4">
+                <TextBlock x:Name="txt" Text="{Binding StatusText}" FontSize="12"
+                           FontWeight="SemiBold" Foreground="#1E7B3A"/>
+            </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static local:MaintenanceStatus.Imminent}">
+                    <Setter TargetName="badge" Property="Background" Value="#FFE8A3"/>
+                    <Setter TargetName="txt" Property="Foreground" Value="#8A5A00"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static local:MaintenanceStatus.Overdue}">
+                    <Setter TargetName="badge" Property="Background" Value="#F8C4C4"/>
+                    <Setter TargetName="txt" Property="Foreground" Value="#A11B1B"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- 사용률 막대 -->
+        <DataTemplate x:Key="UsageBar">
+            <Grid Margin="6,0" VerticalAlignment="Center">
+                <ProgressBar x:Name="bar" Height="18" Minimum="0" Maximum="1"
+                             Value="{Binding UsageRate, Mode=OneWay}"
+                             Foreground="#4CAF72" Background="#EEF0F2" BorderThickness="0"/>
+                <TextBlock Text="{Binding UsageRate, StringFormat={}{0:P0}}" FontSize="11" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static local:MaintenanceStatus.Imminent}">
+                    <Setter TargetName="bar" Property="Foreground" Value="#F0B429"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static local:MaintenanceStatus.Overdue}">
+                    <Setter TargetName="bar" Property="Foreground" Value="#E05252"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- 장비 행 색상: 임박 = 노랑, 초과 = 빨강 -->
+        <Style x:Key="EquipmentRow" TargetType="DataGridRow">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static local:MaintenanceStatus.Imminent}">
+                    <Setter Property="Background" Value="#FFF6D9"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static local:MaintenanceStatus.Overdue}">
+                    <Setter Property="Background" Value="#FFE1E1"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="PartRow" TargetType="DataGridRow">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsLowStock}" Value="True">
+                    <Setter Property="Background" Value="#FFE1E1"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="18,14,18,8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ===== 헤더 ===== -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,10">
+            <TextBlock DockPanel.Dock="Right" VerticalAlignment="Bottom" Foreground="#6B7280"
+                       Text="{Binding Today, StringFormat='기준일 {0:yyyy-MM-dd (ddd)}', ConverterCulture=ko-KR}"/>
+            <StackPanel>
+                <TextBlock Text="장비 정비 현황" FontSize="24" FontWeight="Bold" Foreground="#111827"/>
+                <TextBlock Text="MIL-Asset Tracker · 방산 장비 정비 및 부품 재고 관리" Foreground="#6B7280" Margin="0,2,0,0"/>
+            </StackPanel>
+        </DockPanel>
+
+        <!-- ===== 경고 배너 ===== -->
+        <Border Grid.Row="1" Margin="0,0,0,12" Padding="14,10" CornerRadius="6" BorderThickness="1">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Background" Value="#E8F5EC"/>
+                    <Setter Property="BorderBrush" Value="#9CD3AE"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasAlert}" Value="True">
+                            <Setter Property="Background" Value="#FFF3E3"/>
+                            <Setter Property="BorderBrush" Value="#F0B46A"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="⚠" FontSize="16" Margin="0,0,8,0" Foreground="#C2410C"
+                           Visibility="{Binding HasAlert, Converter={StaticResource BoolToVis}}"/>
+                <TextBlock Text="{Binding AlertText}" FontSize="15" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ===== 탭 ===== -->
+        <TabControl Grid.Row="2" Padding="0" BorderThickness="0" Background="Transparent">
+
+            <!-- ───────── 탭 1: 장비 현황 ───────── -->
+            <TabItem Header="  장비 현황  " Padding="10,6">
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="360"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 왼쪽: 검색/정렬 + 목록 -->
+                    <DockPanel Grid.Column="0">
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <TextBlock Text="검색" Style="{StaticResource Label}" Margin="0,0,6,0"/>
+                            <TextBox Width="210" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="ID, 장비명, 분류, 상태, 예정일(예: 2026-11) 검색"/>
+                            <ComboBox Width="110" Margin="8,0,0,0" ItemsSource="{Binding SystemFilters}"
+                                      SelectedItem="{Binding SelectedSystemFilter}"/>
+                            <ComboBox Width="100" Margin="6,0,0,0" ItemsSource="{Binding StatusFilters}"
+                                      SelectedItem="{Binding SelectedStatusFilter}"/>
+                            <ComboBox Width="110" Margin="6,0,0,0" ItemsSource="{Binding DueFilters}"
+                                      DisplayMemberPath="Display" SelectedItem="{Binding SelectedDueFilter}"/>
+                            <Button Content="초기화" Margin="6,0,0,0" Command="{Binding ClearSearchCommand}"/>
+
+                            <TextBlock Text="정렬" Style="{StaticResource Label}" Margin="14,0,6,0"/>
+                            <ComboBox Width="110" ItemsSource="{Binding SortOptions}" DisplayMemberPath="Display"
+                                      SelectedItem="{Binding SelectedSortOption}"/>
+                            <ToggleButton Margin="6,0,0,0" Padding="10,4" MinWidth="96" IsChecked="{Binding SortDescending}">
+                                <ToggleButton.Style>
+                                    <Style TargetType="ToggleButton">
+                                        <Setter Property="Content" Value="▲ 오름차순"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter Property="Content" Value="▼ 내림차순"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ToggleButton.Style>
+                            </ToggleButton>
+                        </WrapPanel>
+
+                        <DataGrid ItemsSource="{Binding EquipmentView}"
+                                  SelectedItem="{Binding SelectedEquipment, Mode=TwoWay}"
+                                  RowStyle="{StaticResource EquipmentRow}" RowHeight="50">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="사진" Width="72" CanUserSort="False">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Grid Width="60" Height="42" ClipToBounds="True">
+                                                <Border Background="#E5E7EB" CornerRadius="3">
+                                                    <TextBlock Text="{Binding Category}" FontSize="11" Foreground="#6B7280"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <Image Source="{Binding ImagePath, Converter={StaticResource ImgConv}, ConverterParameter=160}"
+                                                       Stretch="UniformToFill"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="74" ElementStyle="{StaticResource Cell}"/>
+                                <DataGridTextColumn Header="체계" Binding="{Binding SystemName}" Width="80" ElementStyle="{StaticResource Cell}"/>
+                                <DataGridTextColumn Header="장비명" Binding="{Binding Name}" Width="*" MinWidth="120" ElementStyle="{StaticResource Cell}"/>
+                                <DataGridTextColumn Header="분류" Binding="{Binding Category}" Width="56" ElementStyle="{StaticResource Cell}"/>
+                                <DataGridTextColumn Header="가동(h)" Binding="{Binding RuntimeHours, StringFormat={}{0:N0}}" Width="70" ElementStyle="{StaticResource CellRight}"/>
+                                <DataGridTextColumn Header="임계(h)" Binding="{Binding ThresholdHours, StringFormat={}{0:N0}}" Width="70" ElementStyle="{StaticResource CellRight}"/>
+                                <DataGridTemplateColumn Header="사용률" Width="110" SortMemberPath="UsageRate"
+                                                        CellTemplate="{StaticResource UsageBar}"/>
+                                <DataGridTextColumn Header="정비 예정일" Binding="{Binding NextMaintenanceDate, StringFormat={}{0:yyyy-MM-dd}}" Width="96" ElementStyle="{StaticResource Cell}"/>
+                                <DataGridTextColumn Header="D-day" Binding="{Binding DDayText}" SortMemberPath="DaysUntilMaintenance" Width="62" ElementStyle="{StaticResource Cell}"/>
+                                <DataGridTemplateColumn Header="상태" Width="92" SortMemberPath="Status"
+                                                        CellTemplate="{StaticResource StatusBadge}"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+
+                    <!-- 오른쪽: 상세 패널 -->
+                    <Border Grid.Column="2" Style="{StaticResource Card}" Padding="0">
+                        <Grid>
+                            <TextBlock Text="왼쪽 목록에서 장비를 선택하세요" Foreground="#9CA3AF"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Visibility="{Binding SelectedEquipment, Converter={StaticResource NullToVisInv}}"/>
+
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          Visibility="{Binding SelectedEquipment, Converter={StaticResource NullToVis}}">
+                                <StackPanel Margin="14">
+
+                                    <!-- 사진 -->
+                                    <Grid Height="200" ClipToBounds="True">
+                                        <Border Background="#EEF0F3" CornerRadius="6">
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock Text="사진 없음" FontSize="15" Foreground="#9CA3AF" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="[사진 등록]을 눌러 추가하세요" FontSize="11" Foreground="#9CA3AF"
+                                                           HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Image Source="{Binding SelectedEquipment.ImagePath, Converter={StaticResource ImgConv}, ConverterParameter=700}"
+                                               Stretch="Uniform"/>
+                                    </Grid>
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                        <Button Content="사진 등록/변경" Command="{Binding ChangePhotoCommand}"/>
+                                        <Button Content="사진 삭제" Command="{Binding RemovePhotoCommand}"/>
+                                    </StackPanel>
+
+                                    <!-- 기본 정보 -->
+                                    <DockPanel Margin="0,14,0,2">
+                                        <ContentControl DockPanel.Dock="Right" Content="{Binding SelectedEquipment}"
+                                                        ContentTemplate="{StaticResource StatusBadge}"/>
+                                        <TextBlock Text="{Binding SelectedEquipment.Name}" FontSize="19" FontWeight="Bold"/>
+                                    </DockPanel>
+                                    <TextBlock Foreground="#6B7280">
+                                        <Run Text="{Binding SelectedEquipment.Id, Mode=OneWay}"/><Run Text="  ·  "/><Run Text="{Binding SelectedEquipment.SystemName, Mode=OneWay}"/><Run Text="  ·  "/><Run Text="{Binding SelectedEquipment.Category, Mode=OneWay}"/>
+                                    </TextBlock>
+
+                                    <Grid Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Text="가동 / 임계" Style="{StaticResource Label}"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Value}">
+                                            <Run Text="{Binding SelectedEquipment.RuntimeHours, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" h / "/><Run Text="{Binding SelectedEquipment.ThresholdHours, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" h"/>
+                                        </TextBlock>
+
+                                        <TextBlock Grid.Row="1" Text="사용률" Style="{StaticResource Label}"/>
+                                        <ContentControl Grid.Row="1" Grid.Column="1" Margin="-6,3,0,3"
+                                                        Content="{Binding SelectedEquipment}" ContentTemplate="{StaticResource UsageBar}"/>
+
+                                        <TextBlock Grid.Row="2" Text="정비 예정일" Style="{StaticResource Label}"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Value}">
+                                            <Run Text="{Binding SelectedEquipment.NextMaintenanceDate, StringFormat={}{0:yyyy-MM-dd}, Mode=OneWay}"/><Run Text="  ("/><Run Text="{Binding SelectedEquipment.DDayText, Mode=OneWay}"/><Run Text=")"/>
+                                        </TextBlock>
+
+                                        <TextBlock Grid.Row="3" Text="최근 정비일" Style="{StaticResource Label}"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource Value}"
+                                                   Text="{Binding SelectedEquipment.LastMaintenanceDate, StringFormat={}{0:yyyy-MM-dd}, TargetNullValue=-}"/>
+
+                                        <TextBlock Grid.Row="4" Text="정비 주기" Style="{StaticResource Label}"/>
+                                        <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource Value}"
+                                                   Text="{Binding SelectedEquipment.MaintenanceIntervalDays, StringFormat={}{0}일}"/>
+                                    </Grid>
+
+                                    <WrapPanel Margin="0,10,0,0">
+                                        <Button Content="가동 +10h" Command="{Binding AddRuntimeCommand}" CommandParameter="10"/>
+                                        <Button Content="가동 +50h" Command="{Binding AddRuntimeCommand}" CommandParameter="50"/>
+                                        <Button Content="정비 완료" Style="{StaticResource PrimaryButton}"
+                                                Command="{Binding CompleteMaintenanceCommand}"
+                                                ToolTip="가동 시간을 0으로 돌리고 다음 정비일을 정비 주기만큼 미룹니다"/>
+                                    </WrapPanel>
+
+                                    <Separator Margin="0,16,0,12"/>
+
+                                    <!-- 부품 교체 -->
+                                    <TextBlock Text="부품 교체" Style="{StaticResource SectionTitle}"/>
+                                    <ComboBox ItemsSource="{Binding CompatibleParts}" DisplayMemberPath="DisplayName"
+                                              SelectedItem="{Binding SelectedPart}"/>
+                                    <Grid Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="56"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="수량" Style="{StaticResource Label}" Margin="0,0,6,0"/>
+                                        <TextBox Grid.Column="1" Text="{Binding ReplaceQuantity, UpdateSourceTrigger=PropertyChanged}"
+                                                 HorizontalContentAlignment="Right"/>
+                                        <Grid Grid.Column="2" Margin="6,0,0,0">
+                                            <TextBox ToolTip="비고 (교체 사유 등)"
+                                                     Text="{Binding ReplaceNote, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <TextBlock Text="비고 (예: 누유로 교체)" Foreground="#9CA3AF" Margin="8,0,0,0"
+                                                       VerticalAlignment="Center" IsHitTestVisible="False"
+                                                       Visibility="{Binding ReplaceNote, Converter={StaticResource NullToVisInv}}"/>
+                                        </Grid>
+                                    </Grid>
+                                    <TextBlock Text="{Binding ReplaceWarning}" Foreground="#B91C1C" Margin="0,4,0,0"
+                                               Visibility="{Binding ReplaceWarning, Converter={StaticResource NullToVis}}"/>
+                                    <Button Content="교체 등록 (재고 차감)" Margin="0,8,0,0" HorizontalAlignment="Left"
+                                            Style="{StaticResource PrimaryButton}" Command="{Binding ReplacePartCommand}"/>
+
+                                    <Separator Margin="0,16,0,12"/>
+
+                                    <!-- 이력 -->
+                                    <TextBlock Text="정비 · 교체 이력" Style="{StaticResource SectionTitle}"/>
+                                    <TextBlock Text="이력이 없습니다" Foreground="#9CA3AF">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedHistory.Count}" Value="0">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <ItemsControl ItemsSource="{Binding SelectedHistory}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border BorderBrush="#EEF0F2" BorderThickness="0,0,0,1" Padding="0,6">
+                                                    <StackPanel>
+                                                        <TextBlock FontSize="11" Foreground="#6B7280">
+                                                            <Run Text="{Binding Timestamp, StringFormat={}{0:yyyy-MM-dd HH:mm}, Mode=OneWay}"/><Run Text="  ·  "/><Run Text="{Binding Kind, Mode=OneWay}" FontWeight="SemiBold"/>
+                                                        </TextBlock>
+                                                        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- ───────── 탭 2: 부품 재고 ───────── -->
+            <TabItem Header="  부품 재고  " Padding="10,6">
+                <DockPanel Margin="0,10,0,0">
+                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <TextBlock Text="검색" Style="{StaticResource Label}" Margin="0,0,6,0"/>
+                        <TextBox Width="220" Text="{Binding PartSearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                        <CheckBox Content="부족 재고만 보기" Margin="12,0,0,0" VerticalAlignment="Center"
+                                  IsChecked="{Binding ShowLowStockOnly}"/>
+                        <TextBlock Text="입고 수량" Style="{StaticResource Label}" Margin="24,0,6,0"/>
+                        <TextBox Width="60" HorizontalContentAlignment="Right"
+                                 Text="{Binding RestockQuantity, UpdateSourceTrigger=PropertyChanged}"/>
+                    </WrapPanel>
+
+                    <DataGrid ItemsSource="{Binding PartView}"
+                              RowStyle="{StaticResource PartRow}" RowHeight="36">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="부품번호" Binding="{Binding PartNo}" Width="100" ElementStyle="{StaticResource Cell}"/>
+                            <DataGridTextColumn Header="부품명" Binding="{Binding Name}" Width="*" ElementStyle="{StaticResource Cell}"/>
+                            <DataGridTextColumn Header="적용 분류" Binding="{Binding Category}" Width="90" ElementStyle="{StaticResource Cell}"/>
+                            <DataGridTextColumn Header="현재 재고" Binding="{Binding Stock}" Width="90" ElementStyle="{StaticResource CellRight}"/>
+                            <DataGridTextColumn Header="최소 재고" Binding="{Binding MinStock}" Width="90" ElementStyle="{StaticResource CellRight}"/>
+                            <DataGridTextColumn Header="단위" Binding="{Binding Unit}" Width="60" ElementStyle="{StaticResource Cell}"/>
+                            <DataGridTextColumn Header="상태" Binding="{Binding StockStatusText}" SortMemberPath="Stock" Width="70" ElementStyle="{StaticResource Cell}"/>
+                            <DataGridTemplateColumn Header="입고" Width="90" CanUserSort="False">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="+ 입고" Padding="8,2" Margin="4,3" MinWidth="0"
+                                                Command="{Binding DataContext.RestockCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ───────── 탭 3: 전체 이력 ───────── -->
+            <TabItem Header="  전체 이력  " Padding="10,6">
+                <DockPanel Margin="0,10,0,0">
+                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <TextBlock Text="검색" Style="{StaticResource Label}" Margin="0,0,6,0"/>
+                        <TextBox Width="260" Text="{Binding RecordSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="장비, 부품, 구분, 비고, 날짜(예: 2026-11) 검색"/>
+                    </WrapPanel>
+
+                    <DataGrid ItemsSource="{Binding RecordView}" RowHeight="34">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="일시" Binding="{Binding Timestamp, StringFormat={}{0:yyyy-MM-dd HH:mm}}" Width="140" ElementStyle="{StaticResource Cell}"/>
+                            <DataGridTextColumn Header="구분" Binding="{Binding Kind}" Width="80" ElementStyle="{StaticResource Cell}"/>
+                            <DataGridTextColumn Header="장비 ID" Binding="{Binding EquipmentId}" Width="80" ElementStyle="{StaticResource Cell}"/>
+                            <DataGridTextColumn Header="장비명" Binding="{Binding EquipmentName}" Width="140" ElementStyle="{StaticResource Cell}"/>
+                            <DataGridTextColumn Header="부품번호" Binding="{Binding PartNo}" Width="90" ElementStyle="{StaticResource Cell}"/>
+                            <DataGridTextColumn Header="부품명" Binding="{Binding PartName}" Width="140" ElementStyle="{StaticResource Cell}"/>
+                            <DataGridTextColumn Header="재고 증감" Binding="{Binding QuantityChange, StringFormat={}{0:+#;-#;0}}" Width="80" ElementStyle="{StaticResource CellRight}"/>
+                            <DataGridTextColumn Header="비고" Binding="{Binding Note}" Width="*" ElementStyle="{StaticResource Cell}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+
+        <!-- ===== 상태 표시줄 ===== -->
+        <TextBlock Grid.Row="3" Margin="2,8,0,0" Foreground="#4B5563" Text="{Binding StatusMessage}"/>
+    </Grid>
+</Window>
